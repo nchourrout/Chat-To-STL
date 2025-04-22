@@ -2,6 +2,10 @@
 
 A local Streamlit app that converts text prompts into printable STL models via OpenAI + OpenSCAD.
 
+## Prerequisites
+
+- OpenSCAD CLI installed and available in your PATH (e.g. `brew install openscad` on macOS).
+
 ## Quickstart (Local)
 
 1. Install dependencies:
