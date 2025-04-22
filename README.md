@@ -1,4 +1,4 @@
-# 3d Designer Agent
+# 3D Designer Agent
 
 A local Streamlit app that converts text prompts into printable STL models via OpenAI + OpenSCAD.
 
@@ -14,5 +14,9 @@ A local Streamlit app that converts text prompts into printable STL models via O
    ```
 3. Enter your OpenAI API key in the sidebar.
 4. Describe the desired object and download the STL.
+
+## Demo
+
+![Demo Screenshot](demo.png)
 
 Made by [Flowful.ai](https://flowful.ai) 
