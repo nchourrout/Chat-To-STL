@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 import trimesh
 import plotly.graph_objects as go
+import re
 
 # Load environment variables from .env
 load_dotenv(override=True)
@@ -57,6 +58,24 @@ def generate_3d_files(scad_path: str, formats: list[str] = ["stl", "3mf"]) -> di
     return paths
 
 
+def parse_scad_parameters(code: str) -> dict[str, float]:
+    params: dict[str, float] = {}
+    for line in code.splitlines():
+        m = re.match(r"(\w+)\s*=\s*([0-9\.]+)\s*;", line)
+        if m:
+            params[m.group(1)] = float(m.group(2))
+    return params
+
+
+def apply_scad_parameters(code: str, params: dict[str, float]) -> str:
+    def repl(match):
+        name = match.group(1)
+        if name in params:
+            return f"{name} = {params[name]};"
+        return match.group(0)
+    return re.sub(r"(\w+)\s*=\s*[0-9\.]+\s*;", repl, code)
+
+
 def main():
     # Sidebar for custom OpenAI API key
     api_key = st.sidebar.text_input("OpenAI API Key", type="password", value=os.getenv("OPENAI_API_KEY", ""))
@@ -99,62 +118,64 @@ def main():
                         label="Download 3MF File", data=f, file_name="model.3mf", mime="application/octet-stream",
                         key=f"download-3mf-{idx}"
                     )
+                # Add parameter adjustment UI tied to this history message
+                if msg["role"] == "assistant":
+                    params = parse_scad_parameters(msg["scad_code"])
+                    if params:
+                        with st.expander("Adjust parameters", expanded=False):
+                            updated: dict[str, float] = {}
+                            for name, default in params.items():
+                                updated[name] = st.number_input(name, value=default, key=f"{idx}-{name}")
+                            if st.button("Regenerate Preview", key=f"regen-{idx}"):
+                                # Apply new parameter values
+                                new_code = apply_scad_parameters(msg["scad_code"], updated)
+                                # Overwrite SCAD file
+                                with open(msg["scad_path"], "w") as f:
+                                    f.write(new_code)
+                                # Re-generate 3D files
+                                try:
+                                    new_paths = generate_3d_files(msg["scad_path"])
+                                except subprocess.CalledProcessError as e:
+                                    st.error(f"OpenSCAD failed with exit code {e.returncode}")
+                                    return
+                                # Update history message in place
+                                msg["scad_code"] = new_code
+                                msg["content"] = new_code
+                                msg["stl_path"] = new_paths["stl"]
+                                msg["3mf_path"] = new_paths["3mf"]
+                                # Rerun to refresh UI
+                                st.rerun()
 
-    # Accept new user input and display messages
+    # Accept new user input and handle conversation state
     if user_input := st.chat_input("Describe the desired object"):
-        # Echo user message
-        with st.chat_message("user"):
-            st.write(user_input)
-
-        # Generate SCAD code and convert to 3D formats
-        with st.chat_message("assistant"):
-            with st.spinner("Generating and rendering your model..."):
-                scad_code = generate_scad(user_input)
-                with tempfile.NamedTemporaryFile(suffix=".scad", delete=False) as scad_file:
-                    scad_file.write(scad_code.encode("utf-8"))
-                    scad_path = scad_file.name
-                # Convert SCAD to desired 3D file formats
-                try:
-                    file_paths = generate_3d_files(scad_path)
-                    stl_path = file_paths["stl"]
-                    path_3mf = file_paths["3mf"]
-                except subprocess.CalledProcessError as e:
-                    st.error(f"OpenSCAD failed with exit code {e.returncode}")
-                    st.subheader("OpenSCAD stdout")
-                    st.code(e.stdout or "<no stdout>")
-                    st.subheader("OpenSCAD stderr")
-                    st.code(e.stderr or "<no stderr>")
-                    return
-            # Display results if render succeeded
-            with st.expander("Generated OpenSCAD Code", expanded=False):
-                st.code(scad_code, language="c")
-            # Preview the STL mesh
-            mesh = trimesh.load(stl_path)
-            fig = go.Figure(data=[go.Mesh3d(
-                x=mesh.vertices[:,0], y=mesh.vertices[:,1], z=mesh.vertices[:,2],
-                i=mesh.faces[:,0], j=mesh.faces[:,1], k=mesh.faces[:,2],
-                color='lightblue', opacity=0.50
-            )])
-            fig.update_layout(scene=dict(aspectmode='data'), margin=dict(l=0, r=0, b=0, t=0))
-            st.plotly_chart(fig, use_container_width=True, height=600)
-            # Download buttons for each format
-            with open(stl_path, "rb") as f:
-                st.download_button(
-                    label="Download STL File", data=f, file_name="model.stl", mime="application/sla", key=stl_path
-                )
-            with open(path_3mf, "rb") as f:
-                st.download_button(
-                    label="Download 3MF File", data=f, file_name="model.3mf", mime="application/octet-stream", key=path_3mf
-                )
-        # Store messages in history
+        # Add user message to history
         st.session_state.history.append({"role": "user", "content": user_input})
+        # Generate SCAD and 3D files
+        with st.spinner("Generating and rendering your model..."):
+            scad_code = generate_scad(user_input)
+            with tempfile.NamedTemporaryFile(suffix=".scad", delete=False) as scad_file:
+                scad_file.write(scad_code.encode("utf-8"))
+                scad_path = scad_file.name
+            try:
+                file_paths = generate_3d_files(scad_path)
+            except subprocess.CalledProcessError as e:
+                st.error(f"OpenSCAD failed with exit code {e.returncode}")
+                st.subheader("OpenSCAD stdout")
+                st.code(e.stdout or "<no stdout>")
+                st.subheader("OpenSCAD stderr")
+                st.code(e.stderr or "<no stderr>")
+                return
+        # Add assistant message to history and rerun to display via history loop
         st.session_state.history.append({
             "role": "assistant",
             "content": scad_code,
             "scad_code": scad_code,
-            "stl_path": stl_path,
-            "3mf_path": path_3mf
+            "scad_path": scad_path,
+            "stl_path": file_paths["stl"],
+            "3mf_path": file_paths["3mf"]
         })
+        # Rerun to update chat history display
+        st.rerun()
 
     # Fixed footer always visible
     st.markdown(
