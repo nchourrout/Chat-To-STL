@@ -76,6 +76,26 @@ def apply_scad_parameters(code: str, params: dict[str, float]) -> str:
     return re.sub(r"(\w+)\s*=\s*[0-9\.]+\s*;", repl, code)
 
 
+# Dialog for downloading model in chosen format
+@st.dialog("Download Model")
+def download_model_dialog(stl_path: str, threemf_path: str):
+    choice = st.radio("Choose file format", ["STL", "3MF"] )
+    if choice == "STL":
+        with open(stl_path, "rb") as f:
+            st.download_button(
+                label="Download STL File", data=f, file_name="model.stl",
+                mime="application/sla", on_click="ignore"
+            )
+    else:
+        with open(threemf_path, "rb") as f:
+            st.download_button(
+                label="Download 3MF File", data=f, file_name="model.3mf",
+                mime="application/octet-stream", on_click="ignore"
+            )
+    if st.button("Close"):
+        st.rerun()
+
+
 def main():
     # Sidebar for custom OpenAI API key
     api_key = st.sidebar.text_input("OpenAI API Key", type="password", value=os.getenv("OPENAI_API_KEY", ""))
@@ -107,17 +127,9 @@ def main():
                 )])
                 fig.update_layout(scene=dict(aspectmode='data'), margin=dict(l=0, r=0, b=0, t=0))
                 st.plotly_chart(fig, use_container_width=True, height=600)
-                with open(msg["stl_path"], "rb") as f:
-                    st.download_button(
-                        label="Download STL File", data=f, file_name="model.stl", mime="application/sla",
-                        key=f"download-{idx}"
-                    )
-                # Add download button for 3MF file in history
-                with open(msg["3mf_path"], "rb") as f:
-                    st.download_button(
-                        label="Download 3MF File", data=f, file_name="model.3mf", mime="application/octet-stream",
-                        key=f"download-3mf-{idx}"
-                    )
+                # Single button to open download dialog
+                if st.button("Download Model", key=f"download-model-{idx}"):
+                    download_model_dialog(msg["stl_path"], msg["3mf_path"])
                 # Add parameter adjustment UI tied to this history message
                 if msg["role"] == "assistant":
                     params = parse_scad_parameters(msg["scad_code"])
@@ -132,17 +144,16 @@ def main():
                                 # Overwrite SCAD file
                                 with open(msg["scad_path"], "w") as f:
                                     f.write(new_code)
-                                # Re-generate 3D files
+                                # Regenerate only STL preview for speed
                                 try:
-                                    new_paths = generate_3d_files(msg["scad_path"])
+                                    stl_only_path = generate_3d_files(msg["scad_path"], formats=["stl"])["stl"]
                                 except subprocess.CalledProcessError as e:
                                     st.error(f"OpenSCAD failed with exit code {e.returncode}")
                                     return
                                 # Update history message in place
                                 msg["scad_code"] = new_code
                                 msg["content"] = new_code
-                                msg["stl_path"] = new_paths["stl"]
-                                msg["3mf_path"] = new_paths["3mf"]
+                                msg["stl_path"] = stl_only_path
                                 # Rerun to refresh UI
                                 st.rerun()
 
