@@ -28,10 +28,12 @@ def generate_scad(prompt: str) -> str:
     """
     Uses OpenAI API to generate OpenSCAD code from a user prompt.
     """
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": prompt},
-    ]
+    # Build conversation messages including history
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in st.session_state.get("history", []):
+        if "content" in msg:
+            messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": prompt})
     response = client.chat.completions.create(
         model="o4-mini",
         messages=messages,
@@ -146,7 +148,13 @@ def main():
                 )
         # Store messages in history
         st.session_state.history.append({"role": "user", "content": user_input})
-        st.session_state.history.append({"role": "assistant", "scad_code": scad_code, "stl_path": stl_path, "3mf_path": path_3mf})
+        st.session_state.history.append({
+            "role": "assistant",
+            "content": scad_code,
+            "scad_code": scad_code,
+            "stl_path": stl_path,
+            "3mf_path": path_3mf
+        })
 
     # Fixed footer always visible
     st.markdown(
