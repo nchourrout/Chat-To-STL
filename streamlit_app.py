@@ -41,6 +41,20 @@ def generate_scad(prompt: str) -> str:
     return code
 
 
+def generate_3d_files(scad_path: str, formats: list[str] = ["stl", "3mf"]) -> dict[str, str]:
+    """
+    Generate 3D files from a SCAD file using OpenSCAD CLI for specified formats.
+    Returns a mapping from format extension to output file path.
+    Throws CalledProcessError on failure.
+    """
+    paths: dict[str, str] = {}
+    for fmt in formats:
+        output_path = scad_path.replace(".scad", f".{fmt}")
+        subprocess.run(["openscad", "-o", output_path, scad_path], check=True, capture_output=True, text=True)
+        paths[fmt] = output_path
+    return paths
+
+
 def main():
     # Sidebar for custom OpenAI API key
     api_key = st.sidebar.text_input("OpenAI API Key", type="password", value=os.getenv("OPENAI_API_KEY", ""))
@@ -77,6 +91,12 @@ def main():
                         label="Download STL File", data=f, file_name="model.stl", mime="application/sla",
                         key=f"download-{idx}"
                     )
+                # Add download button for 3MF file in history
+                with open(msg["3mf_path"], "rb") as f:
+                    st.download_button(
+                        label="Download 3MF File", data=f, file_name="model.3mf", mime="application/octet-stream",
+                        key=f"download-3mf-{idx}"
+                    )
 
     # Accept new user input and display messages
     if user_input := st.chat_input("Describe the desired object"):
@@ -84,27 +104,29 @@ def main():
         with st.chat_message("user"):
             st.write(user_input)
 
-        # Generate SCAD code and STL file
+        # Generate SCAD code and convert to 3D formats
         with st.chat_message("assistant"):
             with st.spinner("Generating and rendering your model..."):
                 scad_code = generate_scad(user_input)
                 with tempfile.NamedTemporaryFile(suffix=".scad", delete=False) as scad_file:
                     scad_file.write(scad_code.encode("utf-8"))
                     scad_path = scad_file.name
-                stl_path = scad_path.replace(".scad", ".stl")
-            # Run OpenSCAD and catch errors
-            try:
-                subprocess.run(["openscad", "-o", stl_path, scad_path], check=True, capture_output=True, text=True)
-            except subprocess.CalledProcessError as e:
-                st.error(f"OpenSCAD failed with exit code {e.returncode}")
-                st.subheader("OpenSCAD stdout")
-                st.code(e.stdout or "<no stdout>")
-                st.subheader("OpenSCAD stderr")
-                st.code(e.stderr or "<no stderr>")
-                return
+                # Convert SCAD to desired 3D file formats
+                try:
+                    file_paths = generate_3d_files(scad_path)
+                    stl_path = file_paths["stl"]
+                    path_3mf = file_paths["3mf"]
+                except subprocess.CalledProcessError as e:
+                    st.error(f"OpenSCAD failed with exit code {e.returncode}")
+                    st.subheader("OpenSCAD stdout")
+                    st.code(e.stdout or "<no stdout>")
+                    st.subheader("OpenSCAD stderr")
+                    st.code(e.stderr or "<no stderr>")
+                    return
             # Display results if render succeeded
             with st.expander("Generated OpenSCAD Code", expanded=False):
                 st.code(scad_code, language="c")
+            # Preview the STL mesh
             mesh = trimesh.load(stl_path)
             fig = go.Figure(data=[go.Mesh3d(
                 x=mesh.vertices[:,0], y=mesh.vertices[:,1], z=mesh.vertices[:,2],
@@ -113,13 +135,18 @@ def main():
             )])
             fig.update_layout(scene=dict(aspectmode='data'), margin=dict(l=0, r=0, b=0, t=0))
             st.plotly_chart(fig, use_container_width=True, height=600)
+            # Download buttons for each format
             with open(stl_path, "rb") as f:
                 st.download_button(
                     label="Download STL File", data=f, file_name="model.stl", mime="application/sla", key=stl_path
                 )
+            with open(path_3mf, "rb") as f:
+                st.download_button(
+                    label="Download 3MF File", data=f, file_name="model.3mf", mime="application/octet-stream", key=path_3mf
+                )
         # Store messages in history
         st.session_state.history.append({"role": "user", "content": user_input})
-        st.session_state.history.append({"role": "assistant", "scad_code": scad_code, "stl_path": stl_path})
+        st.session_state.history.append({"role": "assistant", "scad_code": scad_code, "stl_path": stl_path, "3mf_path": path_3mf})
 
     # Fixed footer always visible
     st.markdown(
