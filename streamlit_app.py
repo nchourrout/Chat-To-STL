@@ -15,9 +15,6 @@ title = "3D Designer Agent"
 # Set the Streamlit layout to wide
 st.set_page_config(page_title=title, layout="wide")
 
-# Initialize OpenAI API key
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 SYSTEM_PROMPT = (
     "You are an expert in OpenSCAD. Given a user prompt describing a 3D printable model, "
     "generate a parametric OpenSCAD script that fulfills the description. "
@@ -27,15 +24,15 @@ SYSTEM_PROMPT = (
 
 # Cache SCAD generation to avoid repeated API calls for same prompt+history
 @st.cache_data
-def generate_scad(prompt: str) -> str:
+def generate_scad(prompt: str, history: tuple[tuple[str, str]], api_key: str) -> str:
     """
     Uses OpenAI API to generate OpenSCAD code from a user prompt.
     """
+    client = OpenAI(api_key=api_key)
     # Build conversation messages including history
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in st.session_state.get("history", []):
-        if "content" in msg:
-            messages.append({"role": msg["role"], "content": msg["content"]})
+    for role, content in history:
+        messages.append({"role": role, "content": content})
     messages.append({"role": "user", "content": prompt})
     response = client.chat.completions.create(
         model="o4-mini",
@@ -102,13 +99,14 @@ def download_model_dialog(stl_path: str, threemf_path: str):
 def main():
     # Sidebar for custom OpenAI API key
     api_key = st.sidebar.text_input("OpenAI API Key", type="password", value=os.getenv("OPENAI_API_KEY", ""))
-    if api_key:
-        client.api_key = api_key
 
     # Display large app logo and updated title
     st.logo("https://media.githubusercontent.com/media/nchourrout/Chat-To-STL/main/logo.png", size="large")
     st.title(title)
     st.write("Enter a description for your 3D model, and this app will generate an STL file using OpenSCAD and OpenAI.")
+
+    if not api_key:
+        st.warning("👈 Please enter an OpenAI API key in the sidebar to generate a model.")
 
     # Initialize chat history
     if "history" not in st.session_state:
@@ -167,11 +165,20 @@ def main():
 
     # Accept new user input and handle conversation state
     if user_input := st.chat_input("Describe the desired object"):
+        if not api_key:
+            st.error("👈 Please enter an OpenAI API key in the sidebar to generate a model.")
+            return
+
         # Add user message to history
         st.session_state.history.append({"role": "user", "content": user_input})
         # Generate SCAD and 3D files
         with st.spinner("Generating and rendering your model..."):
-            scad_code = generate_scad(user_input)
+            history_for_api = tuple(
+                (m["role"], m["content"])
+                for m in st.session_state.history
+                if "content" in m and "role" in m
+            )
+            scad_code = generate_scad(user_input, history_for_api, api_key)
             with tempfile.NamedTemporaryFile(suffix=".scad", delete=False) as scad_file:
                 scad_file.write(scad_code.encode("utf-8"))
                 scad_path = scad_file.name
