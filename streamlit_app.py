@@ -214,8 +214,12 @@ def main():
             width: 100%;
             text-align: center;
             padding: 10px 0;
-            background-color: #f0f2f6;
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
             z-index: 1000;
+        }
+        footer a {
+            color: var(--primary-color);
         }
         </style>
         <footer>Made by <a href="https://flowful.ai" target="_blank">flowful.ai</a></footer>
