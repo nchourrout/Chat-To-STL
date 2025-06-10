@@ -1,3 +1,0 @@
-*.png filter=lfs diff=lfs merge=lfs -text
-demo.png filter=lfs diff=lfs merge=lfs -text
-logo.png filter=lfs diff=lfs merge=lfs -text

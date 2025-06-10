@@ -42,9 +42,6 @@ Thumbs.db
 *.log
 *.sqlite3
 
-# Streamlit local config
-.streamlit/
-
 # Environment files
 .env
 
