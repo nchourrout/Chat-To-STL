@@ -32,7 +32,7 @@ A Dockerized Streamlit app that converts text prompts into printable STL models 
 
 ## Demo
 
-![Demo Screenshot](demo.png)
+![Demo Screenshot](https://raw.githubusercontent.com/nchourrout/Chat-To-STL/main/demo.png)
 
 For more example models and usage patterns, see our Medium post: [Vibe Modeling: Turning Prompts into Parametric 3D Prints](https://medium.com/@nchourrout/vibe-modeling-turning-prompts-into-parametric-3d-prints-a63405d36824).
 

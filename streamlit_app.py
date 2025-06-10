@@ -106,7 +106,7 @@ def main():
         client.api_key = api_key
 
     # Display large app logo and updated title
-    st.logo("logo.png", size="large")
+    st.logo("https://raw.githubusercontent.com/nchourrout/Chat-To-STL/main/logo.png", size="large")
     st.title(title)
     st.write("Enter a description for your 3D model, and this app will generate an STL file using OpenSCAD and OpenAI.")
 
