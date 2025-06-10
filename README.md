@@ -1,3 +1,11 @@
+---
+title: 3D Designer Agent
+emoji: 🤖
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+---
 # 3D Designer Agent
 
 A Dockerized Streamlit app that converts text prompts into printable STL models via OpenAI + OpenSCAD.
