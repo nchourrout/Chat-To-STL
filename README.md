@@ -22,6 +22,25 @@ A Dockerized Streamlit app that converts text prompts into printable STL models 
    ```
 3. Visit http://localhost:7860 in your browser.
 
+## Deploying to Hugging Face
+
+Note: This project requires a Hugging Face Space of type "Docker".
+
+First, ensure you have a remote named `hf` pointing to your Hugging Face Space repository. You can add it with:
+`git remote add hf https://huggingface.co/spaces/YOUR-USERNAME/YOUR-SPACE-NAME`
+
+
+Then execute the commands below to create a temporary branch, commit all files, force-pushes to the `hf` remote's `main` branch, and then cleans up: 
+
+```bash
+git checkout --orphan hf-main && \
+git add . && \
+git commit -m "New release" && \
+git push --force hf hf-main:main && \
+git checkout main && \
+git branch -D hf-main
+```
+
 ## Demo
 
 ![Demo Screenshot](https://media.githubusercontent.com/media/nchourrout/Chat-To-STL/main/demo.png)
