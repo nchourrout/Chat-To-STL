@@ -22,14 +22,6 @@ A Dockerized Streamlit app that converts text prompts into printable STL models 
    ```
 3. Visit http://localhost:7860 in your browser.
 
-## Deploy on Hugging Face Spaces
-
-1. Create a new Space → **SDK: Docker**.  
-2. Push this repo (including the `Dockerfile` and `.dockerignore`) to it.  
-3. (Optional) In the Space's **Settings → Secrets**, add your own `OPENAI_API_KEY` to pre-fill the sidebar input. If you leave it empty, visitors can enter their own API key in the app's sidebar.  
-4. Wait for the build; your app will be live at  
-   `https://<your-username>.hf.space/<space-name>`.
-
 ## Demo
 
 ![Demo Screenshot](https://media.githubusercontent.com/media/nchourrout/Chat-To-STL/main/demo.png)
