@@ -1,26 +1,29 @@
 # 3D Designer Agent
 
-A local Streamlit app that converts text prompts into printable STL models via OpenAI + OpenSCAD.
+A Dockerized Streamlit app that converts text prompts into printable STL models via OpenAI + OpenSCAD.
 
-## Prerequisites
+## Local Usage with Docker
 
-- OpenSCAD CLI installed and available in your PATH (e.g. `brew install openscad` on macOS).
-
-## Quickstart (Local)
-
-1. Install dependencies:
+1. Build the Docker image:
    ```bash
-   pip install -r requirements.txt
+   docker build -t 3d-designer-agent .
    ```
-2. Run the app:
+2. Run the container (passing your OpenAI key):
    ```bash
-   streamlit run streamlit_app.py
+   docker run --rm -p 7860:7860 -e OPENAI_API_KEY=$OPENAI_API_KEY 3d-designer-agent
    ```
-3. Enter your OpenAI API key in the sidebar.
-4. Describe the desired object and download the STL.
+3. Visit http://localhost:7860 in your browser.
+
+## Deploy on Hugging Face Spaces
+
+1. Create a new Space → **SDK: Docker**.  
+2. Push this repo (including the `Dockerfile` and `.dockerignore`) to it.  
+3. (Optional) In the Space’s **Settings → Secrets**, add your own `OPENAI_API_KEY` to pre-fill the sidebar input. If you leave it empty, visitors can enter their own API key in the app’s sidebar.  
+4. Wait for the build; your app will be live at  
+   `https://<your-username>.hf.space/<space-name>`.
 
 ## Demo
 
 ![Demo Screenshot](demo.png)
 
-Made by [Flowful.ai](https://flowful.ai) 
+Made by [Flowful.ai](https://flowful.ai)

@@ -25,6 +25,8 @@ SYSTEM_PROMPT = (
 )
 
 
+# Cache SCAD generation to avoid repeated API calls for same prompt+history
+@st.cache_data
 def generate_scad(prompt: str) -> str:
     """
     Uses OpenAI API to generate OpenSCAD code from a user prompt.
@@ -44,6 +46,7 @@ def generate_scad(prompt: str) -> str:
     return code
 
 
+@st.cache_data
 def generate_3d_files(scad_path: str, formats: list[str] = ["stl", "3mf"]) -> dict[str, str]:
     """
     Generate 3D files from a SCAD file using OpenSCAD CLI for specified formats.
@@ -133,12 +136,17 @@ def main():
                 # Add parameter adjustment UI tied to this history message
                 if msg["role"] == "assistant":
                     params = parse_scad_parameters(msg["scad_code"])
-                    if params:
-                        with st.expander("Adjust parameters", expanded=False):
-                            updated: dict[str, float] = {}
-                            for name, default in params.items():
-                                updated[name] = st.number_input(name, value=default, key=f"{idx}-{name}")
-                            if st.button("Regenerate Preview", key=f"regen-{idx}"):
+                    with st.expander("Adjust parameters", expanded=False):
+                        if not params:
+                            st.write("No numeric parameters detected in the SCAD code.")
+                        else:
+                            # Use a form so inputs don't trigger reruns until submitted
+                            with st.form(key=f"param-form-{idx}"):
+                                updated: dict[str, float] = {}
+                                for name, default in params.items():
+                                    updated[name] = st.number_input(name, value=default, key=f"{idx}-{name}")
+                                regenerate = st.form_submit_button("Regenerate Preview")
+                            if regenerate:
                                 # Apply new parameter values
                                 new_code = apply_scad_parameters(msg["scad_code"], updated)
                                 # Overwrite SCAD file

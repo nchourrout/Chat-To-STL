@@ -1,0 +1,6 @@
+.git
+__pycache__/
+*.py[cod]
+*.stl
+*.3mf
+demo.png 
