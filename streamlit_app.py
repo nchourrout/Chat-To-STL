@@ -107,6 +107,7 @@ def main():
 
     if not api_key:
         st.warning("👈 Please enter an OpenAI API key in the sidebar to generate a model.")
+        st.image("demo.gif")
 
     # Initialize chat history
     if "history" not in st.session_state:
@@ -222,7 +223,7 @@ def main():
             color: var(--primary-color);
         }
         </style>
-        <footer>Made by <a href="https://flowful.ai" target="_blank">flowful.ai</a></footer>
+        <footer>Made by <a href="https://flowful.ai" target="_blank">flowful.ai</a> | <a href="https://medium.com/@nchourrout/vibe-modeling-turning-prompts-into-parametric-3d-prints-a63405d36824" target="_blank">Examples</a></footer>
         """, unsafe_allow_html=True
     )
 
