@@ -48,3 +48,6 @@ git branch -D hf-main
 For more example models and usage patterns, see our Medium post: [Vibe Modeling: Turning Prompts into Parametric 3D Prints](https://medium.com/@nchourrout/vibe-modeling-turning-prompts-into-parametric-3d-prints-a63405d36824).
 
 Made by [Flowful.ai](https://flowful.ai)
+
+## License
+This project is licensed under the [MIT License](LICENSE).
